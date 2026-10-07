@@ -77,11 +77,14 @@ async def _gemini(
     from google.genai import types
 
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    # Thinking tokens count against max_output_tokens on 2.5 Flash and can leave the
+    # visible answer empty, so thinking is off for these short structured calls.
     cfg = types.GenerateContentConfig(
         system_instruction=system,
         max_output_tokens=max_tokens,
         temperature=0.2,
         response_mime_type="application/json" if json_mode else None,
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
     )
     r = await client.aio.models.generate_content(model=model, contents=prompt, config=cfg)
     u = r.usage_metadata

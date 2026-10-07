@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
-from collections import defaultdict, deque
+from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -69,6 +69,10 @@ async def lifespan(app: FastAPI):
     app.state.policy, app.state.policy_hash = policy, policy_hash
     app.state.pipeline = GuardrailPipeline(policy, policy_hash)
     app.state.retriever = Retriever()
+    # Load the lazy models now so the first real request does not pay for them.
+    warm = Context(request_id="warmup", policy_hash=policy_hash)
+    await app.state.pipeline.run_input("warmup: what is the minimum balance?", warm)
+    await app.state.pipeline.run_output("warmup output", warm)
     yield
     tracer().flush()
 
