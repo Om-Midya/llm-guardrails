@@ -1,0 +1,37 @@
+{
+ "061aa8b4bde9db1f9eb4c0368e4e31a9ff40a2280ded08d9acc309d77ed851bd": {
+  "cost_usd": 0.0002983,
+  "input_tokens": 161,
+  "model": "gemini-2.5-flash",
+  "output_tokens": 100,
+  "text": "{\n  \"claims\": [\n    {\n      \"text\": \"The daily UPI limit is 100000 INR\",\n      \"supported\": true\n    },\n    {\n      \"text\": \"it resets at noon every day.\",\n      \"supported\": false\n    },\n    {\n      \"text\": \"You can raise it to 5 lakh by calling the branch.\",\n      \"supported\": false\n    }\n  ]\n}"
+ },
+ "4f078a5d7a21988607cd260de2c1d084497c41011aa788b6cf23dfd1bf3701be": {
+  "cost_usd": 0.0003007,
+  "input_tokens": 169,
+  "model": "gemini-2.5-flash",
+  "output_tokens": 100,
+  "text": "{\n  \"claims\": [\n    {\n      \"text\": \"The 18 month FD rate is 7.1 percent.\",\n      \"supported\": true\n    },\n    {\n      \"text\": \"Senior citizens get an extra 1.5 percent.\",\n      \"supported\": false\n    },\n    {\n      \"text\": \"interest is paid monthly to your savings account.\",\n      \"supported\": false\n    }\n  ]\n}"
+ },
+ "521b02017e925344245512894ea2284acf93b3d9b68c59fbc5842980b63ea8db": {
+  "cost_usd": 0.00024180000000000002,
+  "input_tokens": 156,
+  "model": "gemini-2.5-flash",
+  "output_tokens": 78,
+  "text": "{\n  \"claims\": [\n    {\n      \"text\": \"The minimum balance for a metro savings account is 10000 INR\",\n      \"supported\": false\n    },\n    {\n      \"text\": \"the bank waives it entirely for customers above 60.\",\n      \"supported\": false\n    }\n  ]\n}"
+ },
+ "939e4458fb14fe6a8a27bed39e31531a7bff0c9a4b14880952524dc2db4d3cd1": {
+  "cost_usd": 9.519999999999998e-05,
+  "input_tokens": 159,
+  "model": "gemini-2.5-flash",
+  "output_tokens": 19,
+  "text": "{\n  \"claims\": [\n    {\n      \"text\": \"Home loans are"
+ },
+ "dfb2611a8aaeead730055412b880dacdcaa41eb97f23c55240004d7210141b2f": {
+  "cost_usd": 0.0002364,
+  "input_tokens": 163,
+  "model": "gemini-2.5-flash",
+  "output_tokens": 75,
+  "text": "{\n  \"claims\": [\n    {\n      \"text\": \"Your lost card is covered by zero liability only if you report within 24 hours\",\n      \"supported\": false\n    },\n    {\n      \"text\": \"a replacement costs 500 INR.\",\n      \"supported\": false\n    }\n  ]\n}"
+ }
+}

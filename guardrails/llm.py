@@ -62,7 +62,7 @@ def app_model() -> str:
 
 
 def judge_model() -> str:
-    return os.getenv("JUDGE_MODEL", "claude-haiku-4-5-20251001")
+    return os.getenv("JUDGE_MODEL", "gemini-2.5-flash")
 
 
 def cost(model: str, inp: int, out: int) -> float:
@@ -101,7 +101,6 @@ async def _claude(
     kwargs: dict = {
         "model": model,
         "max_tokens": max_tokens,
-        "temperature": 0,
         "messages": [{"role": "user", "content": prompt}],
     }
     if system:
