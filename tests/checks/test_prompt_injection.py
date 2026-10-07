@@ -73,3 +73,14 @@ async def test_long_input_is_truncated_not_crashing():
     v = await PromptInjectionCheck().check("What is my balance? " * 2000, Context())
     assert v.action in ("allow", "block") and v.reason.startswith("model")
     assert time.perf_counter() - t0 < 10
+
+
+async def test_window_count_is_capped(monkeypatch):
+    from guardrails.checks import prompt_injection as pi
+
+    calls = []
+    monkeypatch.setattr(
+        pi.PromptInjectionCheck, "_model_score", staticmethod(lambda t: calls.append(1) or 0.0)
+    )
+    await PromptInjectionCheck().check("savings account rates " * 20000, Context())
+    assert len(calls) <= pi.MAX_WINDOWS

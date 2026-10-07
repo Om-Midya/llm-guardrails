@@ -47,3 +47,22 @@ async def test_output_check_is_fail_closed_and_redacts():
     assert PIIOutputCheck.fail_closed is True
     v = await PIIOutputCheck().check("Customer email is a@b.co", Context())
     assert v.action == "redact" and "<EMAIL_ADDRESS>" in v.rewritten_text
+
+
+async def test_zero_width_inside_pan_is_still_redacted():
+    v = await PIIInputCheck().check("My PAN is ABC​DE1234F, update it.", Context())
+    assert v.action == "redact" and "ABCDE1234F" not in v.rewritten_text, v
+
+
+def test_overlapping_spans_are_fully_covered():
+    from presidio_analyzer import RecognizerResult
+
+    from guardrails.checks.pii import redact_text
+
+    text = "x 123456789012345 y"
+    results = [
+        RecognizerResult("IN_BANK_ACCOUNT", 2, 13, 0.5),
+        RecognizerResult("IN_PHONE", 7, 17, 0.6),
+    ]
+    out = redact_text(text, results)
+    assert out == "x <IN_BANK_ACCOUNT> y", out

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from functools import lru_cache
 
 from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer, RecognizerResult
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 
 from guardrails.core import BaseCheck, Context, Verdict, register
+
+_ZERO_WIDTH = re.compile(r"[​‌‍⁠﻿]")
 
 DEFAULT_ENTITIES = [
     "IN_PAN",
@@ -109,13 +112,18 @@ def detect(text: str, entities: list[str], min_score: float) -> list[RecognizerR
 
 
 def redact_text(text: str, results: list[RecognizerResult]) -> str:
+    # Merge overlapping spans so no tail of a second entity survives redaction.
+    merged: list[list] = []
+    for r in sorted(results, key=lambda r: r.start):
+        if merged and r.start < merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], r.end)
+        else:
+            merged.append([r.start, r.end, r.entity_type])
     out, last = [], 0
-    for r in results:
-        if r.start < last:
-            continue
-        out.append(text[last : r.start])
-        out.append(f"<{r.entity_type}>")
-        last = r.end
+    for start, end, entity in merged:
+        out.append(text[last:start])
+        out.append(f"<{entity}>")
+        last = end
     out.append(text[last:])
     return "".join(out)
 
@@ -125,7 +133,8 @@ class _PIIBase(BaseCheck):
         entities = list(self.params.get("entities", DEFAULT_ENTITIES))
         action = self.params.get("action", "redact")
         min_score = float(self.params.get("min_score", 0.5))
-        results = await asyncio.to_thread(detect, text, entities, min_score)
+        clean = _ZERO_WIDTH.sub("", text)
+        results = await asyncio.to_thread(detect, clean, entities, min_score)
         if not results:
             return self.allow(0.0, "no pii")
         score = max(r.score for r in results)
@@ -133,7 +142,7 @@ class _PIIBase(BaseCheck):
         reason = f"found {', '.join(found)}"
         if action == "block":
             return self.block(score, reason)
-        return self.redact(redact_text(text, results), score, reason)
+        return self.redact(redact_text(clean, results), score, reason)
 
 
 @register
