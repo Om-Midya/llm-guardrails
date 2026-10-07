@@ -5,7 +5,6 @@ on:
     branches: [main]
 permissions:
   contents: read
-  pull-requests: write
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,6 +22,9 @@ jobs:
           LLM_CASSETTE_MODE: replay
   eval:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
