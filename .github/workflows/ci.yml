@@ -35,6 +35,10 @@ jobs:
       - run: uv sync --all-extras
       - name: Run red-team eval (replay, no LLM calls)
         id: evalrun
+        env:
+          HF_HUB_DISABLE_PROGRESS_BARS: "1"
+          TRANSFORMERS_VERBOSITY: error
+          TOKENIZERS_PARALLELISM: "false"
         run: |
           set +e
           uv run python -m scripts.run_eval --replay > eval.md 2> gate.txt
@@ -51,10 +55,10 @@ jobs:
         run: |
           {
             echo "## Guardrails eval (policy $(jq -r .policy.version evals/results/latest.json))"
-            grep -v -E "^(Warning|Loading|/|  warnings)" eval.md
+            grep -v -E "Loading weights|^Warning|^/|^  warnings" eval.md
             echo
             echo '```'
-            grep -v -E "^(Warning|Loading|/|  warnings)" gate.txt
+            grep -v -E "Loading weights|^Warning|^/|^  warnings" gate.txt
             echo '```'
           } > comment.md
           gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
