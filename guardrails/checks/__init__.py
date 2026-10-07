@@ -1,1 +1,1 @@
-from guardrails.checks import jailbreak, pii, prompt_injection  # noqa: F401
+from guardrails.checks import jailbreak, pii, prompt_injection, secret_leak  # noqa: F401
