@@ -59,7 +59,6 @@ def test_wrong_stage_rejected(tmp_path, dummy_checks):
         load_policy(p)
 
 
-@pytest.mark.xfail(strict=False, reason="checks land in later tasks")
 def test_shipped_policies_load():
     for name in ("v1", "v2"):
         policy, _ = load_policy(f"policies/{name}.yaml")
