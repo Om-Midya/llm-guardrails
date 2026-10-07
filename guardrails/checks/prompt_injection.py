@@ -30,16 +30,21 @@ class PromptInjectionCheck(BaseCheck):
     async def check(self, text: str, ctx: Context) -> Verdict:
         threshold = float(self.params.get("threshold", 0.8))
         use_model = bool(self.params.get("use_model", True))
-        norm = normalize(text)[:MAX_CHARS]
+        norm = normalize(text)
 
         regex_hits = [p.pattern for p in _COMPILED if p.search(norm)]
         score = 1.0 if regex_hits else 0.0
         reason = f"regex hit: {regex_hits[0]}" if regex_hits else "no regex hit"
 
         if not regex_hits and use_model:
-            model_score = await asyncio.to_thread(self._model_score, norm)
+            # Scan every window so an attack placed after the first 4000 chars is not missed.
+            windows = [norm[i : i + MAX_CHARS] for i in range(0, max(len(norm), 1), MAX_CHARS)]
+            scores = await asyncio.gather(
+                *(asyncio.to_thread(self._model_score, w) for w in windows)
+            )
+            model_score = max(scores)
             score = max(score, model_score)
-            reason = f"model injection prob {model_score:.2f}"
+            reason = f"model injection prob {model_score:.2f} over {len(windows)} window(s)"
 
         if score >= threshold:
             return self.block(score, reason)
