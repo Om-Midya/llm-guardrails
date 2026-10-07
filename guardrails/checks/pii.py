@@ -8,7 +8,6 @@ from presidio_analyzer.nlp_engine import NlpEngineProvider
 
 from guardrails.core import BaseCheck, Context, Verdict, register, strip_invisible
 
-
 DEFAULT_ENTITIES = [
     "IN_PAN",
     "IN_AADHAAR",

@@ -4,7 +4,9 @@ from bankassist import bot
 from bankassist.retriever import Hit
 from guardrails.llm import LLMResponse
 
-HITS = [Hit(text="UPI\n## Daily limit\nThe daily UPI limit is 100000 INR.", source="upi.md", score=0.8)]
+HITS = [
+    Hit(text="UPI\n## Daily limit\nThe daily UPI limit is 100000 INR.", source="upi.md", score=0.8)
+]
 
 
 async def test_answer_sends_context_and_question(monkeypatch):

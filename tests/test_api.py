@@ -89,3 +89,63 @@ def test_metrics_and_ui(client):
     client.post("/chat", json={"message": "What is the minimum balance?"})
     assert "guardrail_check_total" in client.get("/metrics").text
     assert "<html" in client.get("/").text.lower()
+
+
+def test_rate_limit_returns_429_after_burst(client, monkeypatch):
+    monkeypatch.setattr(m, "RATE_LIMIT_PER_MINUTE", 5)
+    m.RATE_BUCKETS.clear()
+    codes = [client.post("/guard/input", json={"text": "hello"}).status_code for _ in range(7)]
+    assert codes[:5] == [200] * 5 and codes[5:] == [429, 429]
+    m.RATE_BUCKETS.clear()
+
+
+def test_traces_never_receive_raw_pii(client, monkeypatch):
+    captured = []
+
+    class Span:
+        def update(self, **kw):
+            captured.append(kw)
+
+    class FakeTrace:
+        def __init__(self, input, metadata):
+            captured.append({"trace_input": input})
+
+        def span(self, name, input=None):
+            from contextlib import contextmanager
+
+            captured.append({"span": name, "input": input})
+
+            @contextmanager
+            def cm():
+                yield Span()
+
+            return cm()
+
+        def end(self, output=None, metadata=None):
+            captured.append({"output": output, "metadata": metadata})
+
+    class FakeTracer:
+        def start_trace(self, name, input, metadata):
+            return FakeTrace(input, metadata)
+
+        def flush(self):
+            pass
+
+    monkeypatch.setattr(m, "tracer", lambda: FakeTracer())
+    client.post(
+        "/chat",
+        json={"message": "My PAN ABCDE1234F is wrong in my KYC records, how do I update it?"},
+    )
+    blob = json.dumps(captured)
+    assert "ABCDE1234F" not in blob and "<IN_PAN>" in blob
+
+
+def test_blocked_output_does_not_leak_content_via_verdicts(client):
+    r = client.post(
+        "/guard/output",
+        json={"text": '{"answer": "key AKIAIOSFODNN7EXAMPLE", "sources": [], "confidence": 1}',
+              "schema_name": "bot_answer"},
+    ).json()
+    assert r["blocked"] and r["final_text"] == "I can't help with that request."
+    assert all(v["rewritten_text"] is None for v in r["verdicts"])
+    assert "AKIA" not in json.dumps(r)

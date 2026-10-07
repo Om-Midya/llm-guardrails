@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import os
+import time
 import uuid
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
@@ -75,8 +77,35 @@ def _ctx(pipe: GuardrailPipeline, **kw) -> Context:
     return Context(request_id=str(uuid.uuid4()), policy_hash=pipe.policy_hash, **kw)
 
 
+def public(verdicts: list[Verdict]) -> list[Verdict]:
+    # rewritten_text can carry redacted or blocked content; clients only get final_text.
+    return [v.model_copy(update={"rewritten_text": None}) for v in verdicts]
+
+
+def public_result(res: PipelineResult) -> PipelineResult:
+    return res.model_copy(update={"verdicts": public(res.verdicts)})
+
+
+# ponytail: in-memory per-IP sliding window; move to Redis if this ever runs on >1 replica
+RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "30"))
+RATE_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
+
+
+def rate_limit(request: Request) -> None:
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?")
+    ip = ip.split(",")[0].strip()
+    now = time.monotonic()
+    bucket = RATE_BUCKETS[ip]
+    while bucket and now - bucket[0] > 60:
+        bucket.popleft()
+    if len(bucket) >= RATE_LIMIT_PER_MINUTE:
+        raise HTTPException(429, detail="rate limit exceeded, try again in a minute")
+    bucket.append(now)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="LLM Guardrails", lifespan=lifespan)
+    limited = [Depends(rate_limit)]
 
     @app.get("/health")
     async def health():
@@ -101,14 +130,14 @@ def create_app() -> FastAPI:
             "output": {k: v.model_dump() for k, v in p.output.items()},
         }
 
-    @app.post("/guard/input", response_model=PipelineResult)
+    @app.post("/guard/input", response_model=PipelineResult, dependencies=limited)
     async def guard_input(req: GuardInputRequest, request: Request):
         pipe: GuardrailPipeline = request.app.state.pipeline
         res = await pipe.run_input(req.text, _ctx(pipe))
         metrics.record("input", res)
-        return res
+        return public_result(res)
 
-    @app.post("/guard/output", response_model=PipelineResult)
+    @app.post("/guard/output", response_model=PipelineResult, dependencies=limited)
     async def guard_output(req: GuardOutputRequest, request: Request):
         pipe: GuardrailPipeline = request.app.state.pipeline
         schema, fallback = SCHEMAS.get(req.schema_name or "", (None, None))
@@ -118,28 +147,30 @@ def create_app() -> FastAPI:
         )
         res = await pipe.run_output(req.text, ctx)
         metrics.record("output", res)
-        return res
+        return public_result(res)
 
-    @app.post("/chat", response_model=ChatResponse)
+    @app.post("/chat", response_model=ChatResponse, dependencies=limited)
     async def chat(req: ChatRequest, request: Request):
         pipe: GuardrailPipeline = request.app.state.pipeline
         retriever: Retriever = request.app.state.retriever
         ctx = _ctx(pipe)
         trace = tracer().start_trace(
-            "chat", input=req.message,
+            "chat", input=None,
             metadata={"policy_version": pipe.policy.version, "policy_hash": pipe.policy_hash},
         )
 
-        with trace.span("guard_input", input=req.message) as s:
+        # Traces only ever see post-redaction text.
+        with trace.span("guard_input") as s:
             inp = await pipe.run_input(req.message, ctx)
-            s.update(output=inp.model_dump())
+            s.update(input=inp.final_text, output=public_result(inp).model_dump())
         metrics.record("input", inp)
         if inp.blocked:
             metrics.REQUESTS.labels("blocked_input").inc()
             trace.end(output="blocked", metadata={"blocked_by": inp.blocked_by})
             return ChatResponse(
                 answer=inp.final_text, sources=[], blocked=True, blocked_by=inp.blocked_by,
-                input_verdicts=inp.verdicts, output_verdicts=[], shadow_blocks=inp.shadow_blocks,
+                input_verdicts=public(inp.verdicts), output_verdicts=[],
+                shadow_blocks=inp.shadow_blocks,
                 policy_version=pipe.policy.version, policy_hash=pipe.policy_hash,
                 overhead_ms=inp.overhead_ms, llm_cost_usd=0.0, request_id=ctx.request_id,
             )
@@ -159,7 +190,6 @@ def create_app() -> FastAPI:
                     },
                 ) from e
             s.update(
-                output=raw.text,
                 metadata={
                     "model": raw.model, "input_tokens": raw.input_tokens,
                     "output_tokens": raw.output_tokens, "cost_usd": raw.cost_usd,
@@ -169,9 +199,9 @@ def create_app() -> FastAPI:
 
         ctx.retrieved_chunks = [h.text for h in hits]
         ctx.schema, ctx.schema_fallback, ctx.repair_fn = bot.BotAnswer, bot.FALLBACK, bot.repair
-        with trace.span("guard_output", input=raw.text) as s:
+        with trace.span("guard_output") as s:
             out = await pipe.run_output(raw.text, ctx)
-            s.update(output=out.model_dump())
+            s.update(output=public_result(out).model_dump())
         metrics.record("output", out)
 
         if out.blocked:
@@ -185,11 +215,14 @@ def create_app() -> FastAPI:
         overhead = inp.overhead_ms + out.overhead_ms
         trace.end(
             output=answer,
-            metadata={"shadow_blocks": shadow, "blocked_by": out.blocked_by, "overhead_ms": overhead},
+            metadata={
+                "shadow_blocks": shadow, "blocked_by": out.blocked_by, "overhead_ms": overhead,
+            },
         )
         return ChatResponse(
             answer=answer, sources=sources, blocked=out.blocked, blocked_by=out.blocked_by,
-            input_verdicts=inp.verdicts, output_verdicts=out.verdicts, shadow_blocks=shadow,
+            input_verdicts=public(inp.verdicts), output_verdicts=public(out.verdicts),
+            shadow_blocks=shadow,
             policy_version=pipe.policy.version, policy_hash=pipe.policy_hash,
             overhead_ms=overhead, llm_cost_usd=raw.cost_usd, request_id=ctx.request_id,
         )
