@@ -9,8 +9,6 @@ PATTERNS = [
     r"\bdisregard (your|the|all) (guidelines|policy|policies|rules|safety|instructions)",
     r"\bfrom now on you (will|must|should) (ignore|disregard|forget)",
     r"\bforget (all |everything )?(you were told|your (rules|instructions))",
-    r"\bDAN\b|\bdo anything now\b",
-    r"\bdeveloper mode\b|\bgod mode\b|\bsudo mode\b|\bjailbreak",
     r"\b(disable|turn off|bypass|remove) (your )?(safety|content|ethical) "
     r"(filters?|guidelines|rules)",
     r"\b(you are|act as|pretend (you are|to be)|roleplay as) .{0,60}"
