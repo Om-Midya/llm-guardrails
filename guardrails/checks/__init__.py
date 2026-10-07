@@ -1,1 +1,1 @@
-from guardrails.checks import jailbreak  # noqa: F401
+from guardrails.checks import jailbreak, prompt_injection  # noqa: F401
