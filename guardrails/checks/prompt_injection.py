@@ -4,7 +4,7 @@ import asyncio
 import re
 
 from guardrails.core import BaseCheck, Context, Verdict, normalize, register
-from guardrails.models import MAX_CHARS, injection_classifier
+from guardrails.models import injection_classifier, windows
 
 PATTERNS = [
     r"^\s*(system|assistant)\s*:",
@@ -20,8 +20,6 @@ PATTERNS = [
     r"\boverride (the )?(system|safety|previous)\b",
 ]
 _COMPILED = [re.compile(p, re.IGNORECASE | re.MULTILINE) for p in PATTERNS]
-# ponytail: 8 windows = 32k chars, far above the 8k API cap; raise if the layer fronts larger inputs
-MAX_WINDOWS = 8
 
 
 @register
@@ -39,15 +37,14 @@ class PromptInjectionCheck(BaseCheck):
         reason = f"regex hit: {regex_hits[0]}" if regex_hits else "no regex hit"
 
         if not regex_hits and use_model:
-            # Scan every window so an attack placed after the first 4000 chars is not missed.
-            windows = [norm[i : i + MAX_CHARS] for i in range(0, max(len(norm), 1), MAX_CHARS)]
-            windows = windows[:MAX_WINDOWS]
+            # Overlapping windows so an attack placed late in a long input is still scored.
+            parts = windows(norm)
             scores = await asyncio.gather(
-                *(asyncio.to_thread(self._model_score, w) for w in windows)
+                *(asyncio.to_thread(self._model_score, w) for w in parts)
             )
             model_score = max(scores)
             score = max(score, model_score)
-            reason = f"model injection prob {model_score:.2f} over {len(windows)} window(s)"
+            reason = f"model injection prob {model_score:.2f} over {len(parts)} window(s)"
 
         if score >= threshold:
             return self.block(score, reason)

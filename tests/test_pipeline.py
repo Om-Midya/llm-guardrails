@@ -114,3 +114,24 @@ async def test_local_checks_run_concurrently(checks):
     r = await GuardrailPipeline(p, "h").run_input("x", Context())
     assert r.overhead_ms < 250
     assert [v.check for v in r.verdicts] == ["c1", "c2", "c3"]
+
+
+async def test_local_checks_rescan_text_rewritten_by_llm_check(checks):
+    class Leak(BaseCheck):
+        async def check(self, text, ctx):
+            return self.block(1.0, "secret") if "AKIA" in text else self.allow()
+
+    Leak.name, Leak.stage = "leak", "output"
+    register(Leak)
+    cls = checks("fixer", "output", is_llm=True)
+
+    async def rewrite(self, text, ctx):
+        return self.redact("repaired AKIA1234", 0.0, "repaired")
+
+    cls.check = rewrite
+    try:
+        p = policy(output={"leak": {}, "fixer": {}})
+        r = await GuardrailPipeline(p, "h").run_output("{bad json", Context())
+        assert r.blocked and r.blocked_by == "leak"
+    finally:
+        CHECK_REGISTRY.pop("leak", None)

@@ -84,7 +84,15 @@ class GuardrailPipeline:
 
         if blocked_by is None:
             for c, cp in llm:
+                before = current
                 apply(c, cp, await self._safe(c, current, ctx))
+                if current != before:
+                    # Text rewritten by an LLM-backed check was never scanned: rescan it.
+                    rescans = await asyncio.gather(
+                        *(self._safe(lc, current, ctx) for lc, _ in local)
+                    )
+                    for (lc, lcp), rv in zip(local, rescans, strict=True):
+                        apply(lc, lcp, rv)
                 if blocked_by is not None:
                     break
 

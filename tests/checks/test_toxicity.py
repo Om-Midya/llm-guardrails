@@ -45,4 +45,4 @@ async def test_toxic_tail_after_long_padding_is_caught(monkeypatch):
     monkeypatch.setattr(tx.ToxicityCheck, "_score", staticmethod(fake))
     text = "Thank you for banking with us. " * 150 + "You absolute moron."
     v = await ToxicityCheck().check(text, Context())
-    assert v.action == "block" and len(seen) >= 2 and max(seen) <= 4000
+    assert v.action == "block" and len(seen) >= 2 and max(seen) <= 1500
