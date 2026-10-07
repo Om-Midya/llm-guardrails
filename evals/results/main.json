@@ -4,7 +4,7 @@
   "version": "1.0",
   "hash": "6869343a4ba5f9c1036eaea57b20ee03bc30f8b21e60c87fbca1274f39fa69ab"
  },
- "generated_at": "2026-10-07T18:24:49+00:00",
+ "generated_at": "2026-10-07T19:02:16+00:00",
  "cassette_mode": "replay",
  "checks": {
   "hallucination": {
@@ -18,7 +18,7 @@
    "catch_rate": 0.8,
    "false_positive_rate": null,
    "p50_ms": 0.0,
-   "p99_ms": 0.4
+   "p99_ms": 0.44
   },
   "jailbreak": {
    "positives": 16,
@@ -28,8 +28,8 @@
    "false_positives": 0,
    "catch_rate": 1.0,
    "false_positive_rate": 0.0,
-   "p50_ms": 0.02,
-   "p99_ms": 0.03
+   "p50_ms": 0.03,
+   "p99_ms": 0.05
   },
   "pii_input": {
    "positives": 16,
@@ -39,8 +39,8 @@
    "false_positives": 0,
    "catch_rate": 1.0,
    "false_positive_rate": 0.0,
-   "p50_ms": 4.39,
-   "p99_ms": 11.87
+   "p50_ms": 4.36,
+   "p99_ms": 13.86
   },
   "pii_output": {
    "positives": 4,
@@ -50,8 +50,8 @@
    "false_positives": 0,
    "catch_rate": 1.0,
    "false_positive_rate": null,
-   "p50_ms": 6.71,
-   "p99_ms": 8.98
+   "p50_ms": 7.18,
+   "p99_ms": 10.0
   },
   "prompt_injection": {
    "positives": 16,
@@ -61,8 +61,8 @@
    "false_positives": 1,
    "catch_rate": 1.0,
    "false_positive_rate": 0.01818181818181818,
-   "p50_ms": 49.92,
-   "p99_ms": 93.0
+   "p50_ms": 51.65,
+   "p99_ms": 69.75
   },
   "schema": {
    "positives": 5,
@@ -73,7 +73,7 @@
    "catch_rate": 1.0,
    "false_positive_rate": null,
    "p50_ms": 0.0,
-   "p99_ms": 1.7
+   "p99_ms": 0.14
   },
   "secret_leak": {
    "positives": 5,
@@ -83,8 +83,8 @@
    "false_positives": 0,
    "catch_rate": 1.0,
    "false_positive_rate": null,
-   "p50_ms": 0.02,
-   "p99_ms": 0.17
+   "p50_ms": 0.03,
+   "p99_ms": 0.19
   },
   "topic": {
    "positives": 16,
@@ -94,8 +94,8 @@
    "false_positives": 0,
    "catch_rate": 1.0,
    "false_positive_rate": 0.0,
-   "p50_ms": 0.02,
-   "p99_ms": 19.86
+   "p50_ms": 0.03,
+   "p99_ms": 13.02
   },
   "toxicity": {
    "positives": 4,
@@ -105,18 +105,18 @@
    "false_positives": 0,
    "catch_rate": 1.0,
    "false_positive_rate": null,
-   "p50_ms": 25.38,
-   "p99_ms": 51.47
+   "p50_ms": 28.22,
+   "p99_ms": 50.48
   }
  },
  "overall": {
   "catch_rate": 0.9885057471264368,
-  "input_overhead_p50_ms": 50.1,
-  "input_overhead_p99_ms": 110.8,
-  "output_overhead_local_p50_ms": 32.7,
-  "output_overhead_local_p99_ms": 59.6,
-  "output_overhead_with_llm_p50_ms": 27.1,
-  "output_overhead_with_llm_p99_ms": 55.5
+  "input_overhead_p50_ms": 51.8,
+  "input_overhead_p99_ms": 89.8,
+  "output_overhead_local_p50_ms": 30.0,
+  "output_overhead_local_p99_ms": 192.8,
+  "output_overhead_with_llm_p50_ms": 30.0,
+  "output_overhead_with_llm_p99_ms": 192.9
  },
  "items": [
   {

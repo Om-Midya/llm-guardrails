@@ -36,3 +36,8 @@ def test_normalize_strips_zero_width():
 def test_context_defaults():
     ctx = Context()
     assert ctx.retrieved_chunks == [] and ctx.schema is None
+
+
+def test_normalize_strips_all_format_characters():
+    # soft hyphen, mongolian vowel separator, unicode tag character
+    assert normalize("ig\u00adnore\u180e all\U000e0041 previous") == "ignore all previous"

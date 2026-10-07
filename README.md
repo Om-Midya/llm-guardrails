@@ -29,18 +29,18 @@ The layer is also exposed on its own as `POST /guard/input` and `POST /guard/out
 
 ## Numbers
 
-Policy `v1.yaml`, hash `6869343a`. Eval run on 2026-10-07 over 64 adversarial inputs, 23 adversarial outputs, and 55 benign questions. All numbers come from `evals/results/main.json`, produced by `scripts/run_eval.py`.
+Policy `v1.yaml`, hash `6869343a`. Eval run on 2026-10-08 over 64 adversarial inputs, 23 adversarial outputs, and 55 benign questions. All numbers come from `evals/results/main.json`, produced by `scripts/run_eval.py`.
 
 | check | catch rate | false-positive rate | p50 ms | p99 ms | misses |
 |---|---|---|---|---|---|
-| jailbreak | 100.0% (16/16) | 0.0% (0/55) | 0.02 | 0.03 | |
-| prompt_injection | 100.0% (16/16) | 1.8% (1/55) | 49.9 | 93.0 | |
-| pii_input | 100.0% (16/16) | 0.0% (0/55) | 4.4 | 11.9 | |
-| topic | 100.0% (16/16) | 0.0% (0/55) | 0.02 | 19.9 | |
-| schema | 100.0% (5/5) | n/a | 0.0 | 1.7 | |
-| secret_leak | 100.0% (5/5) | n/a | 0.02 | 0.17 | |
-| pii_output | 100.0% (4/4) | n/a | 6.7 | 9.0 | |
-| toxicity | 100.0% (4/4) | n/a | 25.4 | 51.5 | |
+| jailbreak | 100.0% (16/16) | 0.0% (0/55) | 0.03 | 0.1 |  |
+| prompt_injection | 100.0% (16/16) | 1.8% (1/55) | 51.65 | 69.8 |  |
+| pii_input | 100.0% (16/16) | 0.0% (0/55) | 4.36 | 13.9 |  |
+| topic | 100.0% (16/16) | 0.0% (0/55) | 0.03 | 13.0 |  |
+| schema | 100.0% (5/5) | n/a | 0.00 | 0.1 |  |
+| secret_leak | 100.0% (5/5) | n/a | 0.03 | 0.2 |  |
+| pii_output | 100.0% (4/4) | n/a | 7.18 | 10.0 |  |
+| toxicity | 100.0% (4/4) | n/a | 28.22 | 50.5 |  |
 | hallucination | 80.0% (4/5) | n/a | 1494 | 4581 | hal-002 |
 
 Overall catch rate: 98.9% (86 of 87 adversarial rows). Benign false positives: 1 of 55 (1.8%).
@@ -51,8 +51,8 @@ Guardrail overhead, measured on an Apple M-series CPU with no GPU:
 
 | stage | p50 ms | p99 ms |
 |---|---|---|
-| input (4 local checks, concurrent) | 50.1 | 110.8 |
-| output, local checks only | 32.7 | 59.6 |
+| input (4 local checks, concurrent) | 51.8 | 89.8 |
+| output, local checks only (wall clock) | 30.0 | 192.8 |
 | output including the LLM judge | 1494 | 4581 |
 
 The input p50 is the prompt-injection classifier, which is the slowest local check. The three regex checks finish in under 0.1 ms.

@@ -173,3 +173,39 @@ def test_rate_bucket_map_is_bounded(monkeypatch):
         m.rate_limit(req)
     assert len(m.RATE_BUCKETS) <= 100
     m.RATE_BUCKETS.clear()
+
+
+@pytest.mark.parametrize("path,payload", [
+    ("/guard/input", {"text": "   "}),
+    ("/guard/output", {"text": "\n\t"}),
+])
+def test_guard_endpoints_reject_blank(client, path, payload):
+    assert client.post(path, json=payload).status_code == 422
+
+
+def test_guard_output_bounds_context_chunks(client):
+    too_many = {"text": "x", "context_chunks": ["c"] * 9}
+    too_long = {"text": "x", "context_chunks": ["c" * 2001]}
+    assert client.post("/guard/output", json=too_many).status_code == 422
+    assert client.post("/guard/output", json=too_long).status_code == 422
+
+
+def test_chat_falls_back_when_schema_check_fails_open(client, monkeypatch):
+    async def bad_answer(question, hits):
+        return LLMResponse(text="not json at all", model="m", input_tokens=1, output_tokens=1,
+                           cost_usd=0.0)
+
+    async def broken_repair(bad, err):
+        raise RuntimeError("gemini 429")
+
+    monkeypatch.setattr("bankassist.bot.answer", bad_answer)
+    monkeypatch.setattr("bankassist.bot.repair", broken_repair)
+    r = client.post("/chat", json={"message": "What is the minimum balance?"})
+    assert r.status_code == 200, r.text
+    assert r.json()["answer"].startswith("I could not produce a reliable answer")
+
+
+def test_rate_limit_is_async_so_it_runs_on_the_event_loop():
+    import inspect
+
+    assert inspect.iscoroutinefunction(m.rate_limit)

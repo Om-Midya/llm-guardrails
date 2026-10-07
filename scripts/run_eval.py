@@ -94,7 +94,7 @@ async def run_all(policy_path: str) -> dict:
         t0 = time.perf_counter()
         res = await pipe.run_output(row["text"], ctx)
         out_llm.append((time.perf_counter() - t0) * 1000)
-        out_local.append(sum(v.latency_ms for v in res.verdicts if v.check not in LLM_CHECKS))
+        out_local.append(res.local_ms)
         score_positive(row, res.verdicts)
 
     checks = {}
@@ -149,8 +149,12 @@ def summarize(results: dict) -> str:
     return "\n".join(lines)
 
 
-def gate(results: dict, thresholds: dict, baseline: dict | None) -> list[str]:
+def gate(
+    results: dict, thresholds: dict, baseline: dict | None, require_baseline: bool = False
+) -> list[str]:
     msgs = []
+    if require_baseline and baseline is None:
+        msgs.append("baseline results file is missing; regression check cannot run")
     default = thresholds.get("default", {})
     for name, c in results["checks"].items():
         t = {**default, **thresholds.get("checks", {}).get(name, {})}
@@ -179,6 +183,7 @@ def main() -> int:
     ap.add_argument("--record", action="store_true")
     ap.add_argument("--replay", action="store_true")
     ap.add_argument("--no-gate", action="store_true")
+    ap.add_argument("--require-baseline", action="store_true")
     a = ap.parse_args()
     if a.record:
         os.environ["LLM_CASSETTE_MODE"] = "record"
@@ -193,7 +198,7 @@ def main() -> int:
         return 0
     thresholds = yaml.safe_load((E / "thresholds.yaml").read_text())
     baseline = json.loads(Path(a.baseline).read_text()) if Path(a.baseline).exists() else None
-    failures = gate(results, thresholds, baseline)
+    failures = gate(results, thresholds, baseline, require_baseline=a.require_baseline)
     if failures:
         print("\nEVAL GATE FAILED:\n- " + "\n- ".join(failures), file=sys.stderr)
         return 1

@@ -6,7 +6,7 @@ import uuid
 from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -26,15 +26,15 @@ STATIC = Path(__file__).parent / "static"
 SCHEMAS = {"bot_answer": (bot.BotAnswer, bot.FALLBACK)}
 
 
+def _not_blank(v: str) -> str:
+    if not v.strip():
+        raise ValueError("text must not be blank")
+    return v
+
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=8000)
-
-    @field_validator("message")
-    @classmethod
-    def not_blank(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("message must not be blank")
-        return v
+    _nb = field_validator("message")(_not_blank)
 
 
 class ChatResponse(BaseModel):
@@ -54,12 +54,17 @@ class ChatResponse(BaseModel):
 
 class GuardInputRequest(BaseModel):
     text: str = Field(min_length=1, max_length=8000)
+    _nb = field_validator("text")(_not_blank)
 
 
 class GuardOutputRequest(BaseModel):
     text: str = Field(min_length=1, max_length=20000)
-    context_chunks: list[str] = Field(default_factory=list)
+    # Bounded so a caller cannot feed megabytes of context to the paid judge.
+    context_chunks: list[Annotated[str, Field(max_length=2000)]] = Field(
+        default_factory=list, max_length=8
+    )
     schema_name: Literal["bot_answer"] | None = None
+    _nb = field_validator("text")(_not_blank)
 
 
 @asynccontextmanager
@@ -105,7 +110,7 @@ def client_ip(request: Request) -> str:
     return request.client.host if request.client else "?"
 
 
-def rate_limit(request: Request) -> None:
+async def rate_limit(request: Request) -> None:
     ip = client_ip(request)
     now = time.monotonic()
     if ip not in RATE_BUCKETS and len(RATE_BUCKETS) >= MAX_RATE_BUCKETS:
@@ -226,7 +231,11 @@ def create_app() -> FastAPI:
             answer, sources = out.final_text, []
             metrics.REQUESTS.labels("blocked_output").inc()
         else:
-            parsed = bot.BotAnswer.model_validate_json(out.final_text)
+            try:
+                parsed = bot.BotAnswer.model_validate_json(out.final_text)
+            except ValueError:
+                # schema check failed open (repair raised); serve the safe fallback, never a 500
+                parsed = bot.BotAnswer.model_validate(bot.FALLBACK)
             answer, sources = parsed.answer, parsed.sources
             metrics.REQUESTS.labels("ok").inc()
         shadow = inp.shadow_blocks + out.shadow_blocks

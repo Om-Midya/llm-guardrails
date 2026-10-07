@@ -7,7 +7,18 @@ from pydantic import ValidationError
 
 from guardrails.core import BaseCheck, Context, Verdict, register
 
-_FENCE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.DOTALL)
+_FENCE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.DOTALL | re.IGNORECASE)
+
+
+def describe_error(e: Exception) -> str:
+    # Never echo the candidate text: reasons travel into API responses and traces.
+    if isinstance(e, ValidationError):
+        parts = []
+        for err in e.errors()[:5]:
+            loc = ".".join(str(x) for x in err["loc"]) or "<root>"
+            parts.append(f"{loc}: {err['type']}")
+        return "; ".join(parts)
+    return type(e).__name__
 
 
 def unfence(text: str) -> str:
@@ -45,7 +56,7 @@ class SchemaCheck(BaseCheck):
                 reason = "normalized" if attempt == 0 else f"repaired after {attempt}"
                 return self.redact(canonical, 0.0, reason)
             except (ValidationError, ValueError) as e:
-                error = str(e)[:500]
+                error = describe_error(e)
             if attempt < max_repairs and ctx.repair_fn is not None:
                 candidate = await ctx.repair_fn(candidate, error)
             else:

@@ -135,3 +135,12 @@ async def test_local_checks_rescan_text_rewritten_by_llm_check(checks):
         assert r.blocked and r.blocked_by == "leak"
     finally:
         CHECK_REGISTRY.pop("leak", None)
+
+
+async def test_local_ms_is_wall_clock_not_sum(checks):
+    for n in ("l1", "l2", "l3"):
+        checks(n, "output", delay=0.1)
+    p = policy(output={"l1": {}, "l2": {}, "l3": {}})
+    r = await GuardrailPipeline(p, "h").run_output("x", Context())
+    assert 90 < r.local_ms < 200
+    assert sum(v.latency_ms for v in r.verdicts) > 250

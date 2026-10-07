@@ -13,12 +13,14 @@ Action = Literal["allow", "block", "redact"]
 Stage = Literal["input", "output"]
 RepairFn = Callable[[str, str], Awaitable[str]]
 
-_ZERO_WIDTH = re.compile(r"[​‌‍⁠﻿]")
 _WS = re.compile(r"\s+")
 
 
 def strip_invisible(text: str) -> str:
-    return _ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text))
+    # Drop every Unicode format character (category Cf): zero-width joiners, soft hyphens,
+    # bidi controls, tag characters. All of them are invisible and all of them split tokens.
+    nfkc = unicodedata.normalize("NFKC", text)
+    return "".join(c for c in nfkc if unicodedata.category(c) != "Cf")
 
 
 def normalize(text: str) -> str:

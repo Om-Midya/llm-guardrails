@@ -15,3 +15,9 @@ def test_windows_overlap_and_fit_model():
 
 def test_window_count_capped():
     assert len(windows("x" * 1_000_000)) == MAX_WINDOWS
+
+
+def test_windows_always_include_the_tail_when_capped():
+    text = "a" * 500_000 + "INJECT-ME"
+    ws = windows(text)
+    assert len(ws) <= MAX_WINDOWS and ws[-1].endswith("INJECT-ME")

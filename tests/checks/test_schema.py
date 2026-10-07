@@ -58,3 +58,15 @@ async def test_no_fallback_blocks():
 async def test_no_schema_allows():
     v = await SchemaCheck().check("free text", Context())
     assert v.action == "allow"
+
+
+async def test_uppercase_fence_is_unwrapped():
+    text = "```JSON\n" + json.dumps(GOOD) + "\n```"
+    v = await SchemaCheck().check(text, Context(schema=Answer))
+    assert v.action == "redact" and json.loads(v.rewritten_text) == GOOD
+
+
+async def test_schema_reason_does_not_echo_model_output():
+    secret_ish = '{"answer": "token AKIAIOSFODNN7EXAMPLE leaked", "sources": []}'
+    v = await SchemaCheck(max_repairs=0).check(secret_ish, Context(schema=Answer))
+    assert v.action == "block" and "AKIA" not in v.reason and "confidence" in v.reason

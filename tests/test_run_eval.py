@@ -42,3 +42,8 @@ def test_gate_fails_on_regression_vs_baseline():
 def test_summary_is_markdown_table():
     s = summarize(results())
     assert s.splitlines()[0].startswith("| check") and "jailbreak" in s
+
+
+def test_gate_requires_baseline_when_asked():
+    msgs = gate(results(), THRESH, None, require_baseline=True)
+    assert msgs and "baseline" in msgs[0]

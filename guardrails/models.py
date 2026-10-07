@@ -13,7 +13,10 @@ MAX_WINDOWS = 16
 def windows(text: str) -> list[str]:
     step = WINDOW - OVERLAP
     out = [text[i : i + WINDOW] for i in range(0, max(len(text), 1), step)]
-    return out[:MAX_WINDOWS]
+    if len(out) > MAX_WINDOWS:
+        # Keep the tail: an attacker who pads the front must not push the payload past the cap.
+        out = out[: MAX_WINDOWS - 1] + [text[-WINDOW:]]
+    return out
 
 
 @lru_cache(maxsize=1)

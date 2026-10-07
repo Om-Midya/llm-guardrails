@@ -17,6 +17,7 @@ class PipelineResult(BaseModel):
     blocked_by: str | None
     verdicts: list[Verdict]
     overhead_ms: float
+    local_ms: float = 0.0
     shadow_blocks: list[str]
 
 
@@ -78,7 +79,10 @@ class GuardrailPipeline:
                 elif blocked_by is None:
                     blocked_by = check.name
 
+        local_ms = 0.0
+        t_local = time.perf_counter()
         results = await asyncio.gather(*(self._safe(c, current, ctx) for c, _ in local))
+        local_ms += (time.perf_counter() - t_local) * 1000
         for (c, cp), v in zip(local, results, strict=True):
             apply(c, cp, v)
 
@@ -88,9 +92,11 @@ class GuardrailPipeline:
                 apply(c, cp, await self._safe(c, current, ctx))
                 if current != before:
                     # Text rewritten by an LLM-backed check was never scanned: rescan it.
+                    t_local = time.perf_counter()
                     rescans = await asyncio.gather(
                         *(self._safe(lc, current, ctx) for lc, _ in local)
                     )
+                    local_ms += (time.perf_counter() - t_local) * 1000
                     for (lc, lcp), rv in zip(local, rescans, strict=True):
                         apply(lc, lcp, rv)
                 if blocked_by is not None:
@@ -103,5 +109,6 @@ class GuardrailPipeline:
             blocked_by=blocked_by,
             verdicts=verdicts,
             overhead_ms=(time.perf_counter() - t0) * 1000,
+            local_ms=local_ms,
             shadow_blocks=shadow_blocks,
         )

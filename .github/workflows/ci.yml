@@ -33,6 +33,10 @@ jobs:
           path: ~/.cache/huggingface
           key: hf-${{ hashFiles('guardrails/models.py') }}
       - run: uv sync --all-extras
+      - name: Fetch the eval baseline from main, not from the PR checkout
+        run: |
+          git fetch --depth=1 origin main
+          git show origin/main:evals/results/main.json > /tmp/baseline.json
       - name: Run red-team eval (replay, no LLM calls)
         id: evalrun
         env:
@@ -41,7 +45,7 @@ jobs:
           TOKENIZERS_PARALLELISM: "false"
         run: |
           set +e
-          uv run python -m scripts.run_eval --replay > eval.md 2> gate.txt
+          uv run python -m scripts.run_eval --replay --baseline /tmp/baseline.json --require-baseline > eval.md 2> gate.txt
           echo "code=$?" >> "$GITHUB_OUTPUT"
           cat eval.md gate.txt
       - uses: actions/upload-artifact@v4
@@ -50,6 +54,7 @@ jobs:
           path: evals/results/latest.json
       - name: Comment on PR
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
