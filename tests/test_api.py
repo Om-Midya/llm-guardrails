@@ -149,3 +149,27 @@ def test_blocked_output_does_not_leak_content_via_verdicts(client):
     assert r["blocked"] and r["final_text"] == "I can't help with that request."
     assert all(v["rewritten_text"] is None for v in r["verdicts"])
     assert "AKIA" not in json.dumps(r)
+
+
+def test_rate_limit_ignores_spoofed_forwarded_for(client, monkeypatch):
+    monkeypatch.setattr(m, "RATE_LIMIT_PER_MINUTE", 3)
+    m.RATE_BUCKETS.clear()
+    codes = []
+    for i in range(5):
+        hdr = {"x-forwarded-for": f"10.0.0.{i}, 203.0.113.9"}
+        codes.append(client.post("/guard/input", json={"text": "hi"}, headers=hdr).status_code)
+    assert codes == [200, 200, 200, 429, 429]
+    assert len(m.RATE_BUCKETS) <= 2
+    m.RATE_BUCKETS.clear()
+
+
+def test_rate_bucket_map_is_bounded(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(m, "MAX_RATE_BUCKETS", 100)
+    m.RATE_BUCKETS.clear()
+    for i in range(150):
+        req = SimpleNamespace(headers={"x-forwarded-for": f"ip{i}"}, client=None)
+        m.rate_limit(req)
+    assert len(m.RATE_BUCKETS) <= 100
+    m.RATE_BUCKETS.clear()

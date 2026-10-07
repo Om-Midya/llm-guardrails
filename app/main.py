@@ -88,14 +88,28 @@ def public_result(res: PipelineResult) -> PipelineResult:
 
 # ponytail: in-memory per-IP sliding window; move to Redis if this ever runs on >1 replica
 RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "30"))
-RATE_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
+MAX_RATE_BUCKETS = 10_000
+RATE_BUCKETS: dict[str, deque[float]] = {}
+
+
+def client_ip(request: Request) -> str:
+    # The rightmost X-Forwarded-For entry is set by the trusted edge proxy; earlier ones
+    # are client-controlled and spoofable.
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[-1].strip()
+    return request.client.host if request.client else "?"
 
 
 def rate_limit(request: Request) -> None:
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?")
-    ip = ip.split(",")[0].strip()
+    ip = client_ip(request)
     now = time.monotonic()
-    bucket = RATE_BUCKETS[ip]
+    if ip not in RATE_BUCKETS and len(RATE_BUCKETS) >= MAX_RATE_BUCKETS:
+        for stale in [k for k, b in RATE_BUCKETS.items() if not b or now - b[-1] > 60]:
+            del RATE_BUCKETS[stale]
+        if len(RATE_BUCKETS) >= MAX_RATE_BUCKETS:
+            RATE_BUCKETS.pop(next(iter(RATE_BUCKETS)))
+    bucket = RATE_BUCKETS.setdefault(ip, deque())
     while bucket and now - bucket[0] > 60:
         bucket.popleft()
     if len(bucket) >= RATE_LIMIT_PER_MINUTE:
