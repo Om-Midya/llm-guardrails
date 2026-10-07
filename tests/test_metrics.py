@@ -27,8 +27,9 @@ def test_record_counts_actions_and_errors():
         ],
     )
     record("input", res)
-    assert sample("guardrail_check_total", check="jailbreak", action="block", mode="enforce") == before["jb"] + 1
-    assert sample("guardrail_check_total", check="topic", action="block", mode="shadow") == before["topic"] + 1
+    jb = sample("guardrail_check_total", check="jailbreak", action="block", mode="enforce")
+    topic = sample("guardrail_check_total", check="topic", action="block", mode="shadow")
+    assert jb == before["jb"] + 1 and topic == before["topic"] + 1
     assert sample("guardrail_check_errors_total", check="pii_input") == before["err"] + 1
     assert sample("guardrail_request_overhead_seconds_count", stage="input") == before["over"] + 1
     assert b"guardrail_check_total" in render()
