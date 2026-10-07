@@ -1,10 +1,22 @@
+from prometheus_client import REGISTRY
+
 from app.metrics import record, render
 from app.tracing import Tracer
 from guardrails.core import Verdict
 from guardrails.pipeline import PipelineResult
 
 
+def sample(name, **labels):
+    return REGISTRY.get_sample_value(name, labels) or 0.0
+
+
 def test_record_counts_actions_and_errors():
+    before = {
+        "jb": sample("guardrail_check_total", check="jailbreak", action="block", mode="enforce"),
+        "topic": sample("guardrail_check_total", check="topic", action="block", mode="shadow"),
+        "err": sample("guardrail_check_errors_total", check="pii_input"),
+        "over": sample("guardrail_request_overhead_seconds_count", stage="input"),
+    }
     res = PipelineResult(
         final_text="x", blocked=True, blocked_by="jailbreak", overhead_ms=3.0,
         shadow_blocks=["topic"],
@@ -15,11 +27,11 @@ def test_record_counts_actions_and_errors():
         ],
     )
     record("input", res)
-    out = render().decode()
-    assert 'guardrail_check_total{action="block",check="jailbreak",mode="enforce"} 1.0' in out
-    assert 'guardrail_check_total{action="block",check="topic",mode="shadow"} 1.0' in out
-    assert 'guardrail_check_errors_total{check="pii_input"} 1.0' in out
-    assert 'guardrail_request_overhead_seconds_count{stage="input"} 1.0' in out
+    assert sample("guardrail_check_total", check="jailbreak", action="block", mode="enforce") == before["jb"] + 1
+    assert sample("guardrail_check_total", check="topic", action="block", mode="shadow") == before["topic"] + 1
+    assert sample("guardrail_check_errors_total", check="pii_input") == before["err"] + 1
+    assert sample("guardrail_request_overhead_seconds_count", stage="input") == before["over"] + 1
+    assert b"guardrail_check_total" in render()
 
 
 def test_tracer_is_noop_without_keys(monkeypatch):
