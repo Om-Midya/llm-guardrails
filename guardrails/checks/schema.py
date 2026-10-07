@@ -15,6 +15,16 @@ def unfence(text: str) -> str:
     return m.group(1) if m else text.strip()
 
 
+def extract_answer(text: str) -> str:
+    try:
+        obj = json.loads(unfence(text))
+        if isinstance(obj, dict) and isinstance(obj.get("answer"), str):
+            return obj["answer"]
+    except ValueError:
+        pass
+    return text
+
+
 @register
 class SchemaCheck(BaseCheck):
     name = "schema"

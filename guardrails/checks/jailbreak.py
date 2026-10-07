@@ -14,7 +14,7 @@ PATTERNS = [
     r"\b(disable|turn off|bypass|remove) (your )?(safety|content|ethical) "
     r"(filters?|guidelines|rules)",
     r"\b(you are|act as|pretend (you are|to be)|roleplay as) .{0,60}"
-    r"\b(no|without|zero) (rules|restrictions|filters|limits|ethics)",
+    r"\b(no|without( any)?|zero) (rules|restrictions|filters|limits|ethics)",
     r"\byou are now (an? )?(unfiltered|unrestricted|uncensored|evil)",
     r"\bhypothetically.{0,80}\b(bypass|ignore|circumvent)\b.{0,40}"
     r"\b(safety|policy|rules|otp|verification)",

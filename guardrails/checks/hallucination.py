@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from guardrails.checks.schema import unfence
+from guardrails.checks.schema import extract_answer, unfence
 from guardrails.core import BaseCheck, Context, Verdict, register
 from guardrails.llm import complete, judge_model
 
@@ -17,16 +17,6 @@ JUDGE_SYSTEM = (
 def build_judge_prompt(answer: str, chunks: list[str]) -> str:
     ctx = "\n\n---\n\n".join(chunks)
     return f"CONTEXT:\n{ctx}\n\nANSWER:\n{answer}"
-
-
-def extract_answer(text: str) -> str:
-    try:
-        obj = json.loads(unfence(text))
-        if isinstance(obj, dict) and isinstance(obj.get("answer"), str):
-            return obj["answer"]
-    except ValueError:
-        pass
-    return text
 
 
 @register

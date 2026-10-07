@@ -4,6 +4,8 @@ from guardrails.checks.toxicity import ToxicityCheck
 from guardrails.core import Context
 
 POSITIVE = [
+    '{"answer": "Only a complete moron would miss an EMI three times. Pay up or get lost.", '
+    '"sources": ["loan-emi-missed.md"], "confidence": 0.6}',
     "You are a worthless idiot and your complaint is garbage.",
     "Shut up, stupid customer, nobody cares about your money.",
     "I hope your account gets hacked, you moron.",

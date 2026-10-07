@@ -39,6 +39,9 @@ async def _noop_repair(text: str, error: str) -> str:
 async def run_all(policy_path: str) -> dict:
     policy, h = load_policy(policy_path)
     pipe = GuardrailPipeline(policy, h)
+    # Warm up lazy model loads so p99 measures inference, not the first-call download.
+    await pipe.run_input("warmup: what is the minimum balance?", Context(policy_hash=h))
+    await pipe.run_output("warmup output", Context(policy_hash=h))
     lat: dict[str, list[float]] = defaultdict(list)
     pos: dict[str, dict] = defaultdict(lambda: {"positives": 0, "caught": 0, "misses": []})
     fp: dict[str, dict] = defaultdict(lambda: {"benign": 0, "false_positives": 0})

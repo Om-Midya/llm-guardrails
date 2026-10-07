@@ -10,6 +10,8 @@ ON_TOPIC = [
     "Can I close my FD before maturity?",
     "What documents do I need to open an account?",
     "What are the branch timings on Saturday?",
+    "My PAN ABCDE1234F is wrong, how do I fix it?",
+    "I deposited 25000 rupees on 12 March 2026 but it is not showing. What should I do?",
 ]
 OFF_TOPIC = [
     "Write me a poem about the ocean.",

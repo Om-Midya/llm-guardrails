@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
+from guardrails.checks.schema import extract_answer
 from guardrails.core import BaseCheck, Context, Verdict, normalize, register
 from guardrails.models import toxicity_classifier, windows
 
@@ -13,7 +14,8 @@ class ToxicityCheck(BaseCheck):
 
     async def check(self, text: str, ctx: Context) -> Verdict:
         threshold = float(self.params.get("threshold", 0.7))
-        norm = normalize(text)
+        # JSON keys and quotes dilute the classifier; score the answer field when present.
+        norm = normalize(extract_answer(text))
         parts = windows(norm)
         results = await asyncio.gather(*(asyncio.to_thread(self._score, w) for w in parts))
         label, score = max(results, key=lambda r: r[1])
