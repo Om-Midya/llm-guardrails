@@ -4,7 +4,7 @@ import math
 import re
 from collections import Counter
 
-from guardrails.core import BaseCheck, Context, Verdict, register
+from guardrails.core import BaseCheck, Context, Verdict, register, strip_invisible
 
 PATTERNS = {
     "aws_access_key": r"\bAKIA[0-9A-Z]{16}\b",
@@ -46,6 +46,7 @@ class SecretLeakCheck(BaseCheck):
 
     async def check(self, text: str, ctx: Context) -> Verdict:
         threshold = float(self.params.get("entropy_threshold", 4.0))
+        text = strip_invisible(text)
         for kind, rx in _COMPILED.items():
             if rx.search(text):
                 return self.block(1.0, f"pattern {kind}")

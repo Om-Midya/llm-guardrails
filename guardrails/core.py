@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -16,8 +17,12 @@ _ZERO_WIDTH = re.compile(r"[​‌‍⁠﻿]")
 _WS = re.compile(r"\s+")
 
 
+def strip_invisible(text: str) -> str:
+    return _ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text))
+
+
 def normalize(text: str) -> str:
-    return _WS.sub(" ", _ZERO_WIDTH.sub("", text)).strip()
+    return _WS.sub(" ", strip_invisible(text)).strip()
 
 
 class Verdict(BaseModel):

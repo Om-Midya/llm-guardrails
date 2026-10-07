@@ -37,3 +37,8 @@ async def test_allows_benign(text):
 def test_entropy():
     assert shannon_entropy("aaaa") == 0
     assert shannon_entropy("Tr0ub4dor&3xJ9!qLpW2zRvK") > 4.0
+
+
+async def test_zero_width_inside_key_is_still_caught():
+    v = await SecretLeakCheck().check("key AKIA​IOSFODNN7EXAMPLE here", Context())
+    assert v.action == "block", v.reason

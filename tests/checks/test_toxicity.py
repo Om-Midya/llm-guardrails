@@ -31,3 +31,18 @@ async def test_allows_firm_but_polite(text):
 async def test_long_output_truncated():
     v = await ToxicityCheck().check("Thank you for banking with us. " * 1500, Context())
     assert v.action == "allow"
+
+
+async def test_toxic_tail_after_long_padding_is_caught(monkeypatch):
+    from guardrails.checks import toxicity as tx
+
+    seen = []
+
+    def fake(text):
+        seen.append(len(text))
+        return ("toxic", 0.95) if "moron" in text else ("toxic", 0.01)
+
+    monkeypatch.setattr(tx.ToxicityCheck, "_score", staticmethod(fake))
+    text = "Thank you for banking with us. " * 150 + "You absolute moron."
+    v = await ToxicityCheck().check(text, Context())
+    assert v.action == "block" and len(seen) >= 2 and max(seen) <= 4000

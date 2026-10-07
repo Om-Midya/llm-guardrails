@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-import re
 from functools import lru_cache
 
 from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer, RecognizerResult
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 
-from guardrails.core import BaseCheck, Context, Verdict, register
+from guardrails.core import BaseCheck, Context, Verdict, register, strip_invisible
 
-_ZERO_WIDTH = re.compile(r"[​‌‍⁠﻿]")
 
 DEFAULT_ENTITIES = [
     "IN_PAN",
@@ -133,7 +131,7 @@ class _PIIBase(BaseCheck):
         entities = list(self.params.get("entities", DEFAULT_ENTITIES))
         action = self.params.get("action", "redact")
         min_score = float(self.params.get("min_score", 0.5))
-        clean = _ZERO_WIDTH.sub("", text)
+        clean = strip_invisible(text)
         results = await asyncio.to_thread(detect, clean, entities, min_score)
         if not results:
             return self.allow(0.0, "no pii")
