@@ -1,0 +1,13 @@
+version: "2.0"
+name: bankassist-strict
+input:
+  jailbreak: {mode: enforce, params: {threshold: 1}}
+  prompt_injection: {mode: enforce, params: {threshold: 0.8, use_model: true}}
+  pii_input: {mode: enforce, params: {action: redact}}
+  topic: {mode: enforce, params: {min_similarity: 0.35}}
+output:
+  schema: {mode: enforce, params: {max_repairs: 1}}
+  secret_leak: {mode: enforce, params: {entropy_threshold: 4.0}}
+  pii_output: {mode: enforce, params: {action: redact}}
+  toxicity: {mode: enforce, params: {threshold: 0.7}}
+  hallucination: {mode: enforce, params: {max_unsupported_ratio: 0.2}}
