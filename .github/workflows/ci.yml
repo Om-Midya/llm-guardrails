@@ -1,0 +1,60 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ hashFiles('guardrails/models.py') }}
+      - run: uv sync --all-extras
+      - run: uv run ruff check .
+      - run: uv run pytest -q -p no:warnings
+        env:
+          LLM_CASSETTE_MODE: replay
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ hashFiles('guardrails/models.py') }}
+      - run: uv sync --all-extras
+      - name: Run red-team eval (replay, no LLM calls)
+        id: evalrun
+        run: |
+          set +e
+          uv run python -m scripts.run_eval --replay > eval.md 2> gate.txt
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat eval.md gate.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: evals/results/latest.json
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "## Guardrails eval (policy $(jq -r .policy.version evals/results/latest.json))"
+            grep -v -E "^(Warning|Loading|/|  warnings)" eval.md
+            echo
+            echo '```'
+            grep -v -E "^(Warning|Loading|/|  warnings)" gate.txt
+            echo '```'
+          } > comment.md
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
+      - name: Enforce gate
+        run: exit ${{ steps.evalrun.outputs.code }}

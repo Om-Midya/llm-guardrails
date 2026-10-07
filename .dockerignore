@@ -1,0 +1,11 @@
+.venv
+.git
+.pytest_cache
+.ruff_cache
+.superpowers
+docs
+tests
+evals/results/latest.json
+evals/results/dry.json
+.env
+*.env
