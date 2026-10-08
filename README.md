@@ -4,6 +4,8 @@ A safety layer that sits between users and a large language model. Every message
 
 This is Project 10 from the Scaler School of Technology course "ML System Design and LLMOps". The repo is at `github.com/Om-Midya/llm-guardrails`.
 
+**Resume line.** Built a versioned guardrails layer for an LLM banking assistant with ten input and output checks (prompt injection, jailbreak, PII redaction, topic, schema repair, secret and PII leak, toxicity, and an LLM-judge hallucination check). Gated every pull request in GitHub Actions on a hand-written 148-row red-team and benign eval set, reaching a 98.9% catch rate with no normal questions blocked. Added shadow-mode rollout, Langfuse tracing, and Prometheus metrics, at under 0.001 USD per request and about 60 ms of median guardrail overhead.
+
 ## What problem this solves
 
 A chatbot that talks to the public faces four kinds of trouble. People try to trick it into ignoring its rules. People paste personal data such as Aadhaar or card numbers into it. The model sometimes invents facts. The model can leak secrets or say something toxic. A guardrail layer catches these cases with small, fast, testable checks. It also records what it caught, so a team can measure it.
@@ -115,6 +117,16 @@ Cost per request:
 
 Prices used: Gemini 2.5 Flash at 0.30 USD per million input tokens and 2.50 USD per million output tokens, as published on 2026-10-07. The whole eval set, recorded once, cost 0.0012 USD in judge calls. Total project spend is under 0.10 USD.
 
+### Load test
+
+`scripts/load_test.py` sends normal banking questions to `POST /guard/input` from Locust: 20 users, ramped at 5 per second, for 60 seconds. It ran on one Apple M4 laptop (10 cores, no GPU), with one server process and the rate limit lifted for the test. Raw numbers are in `evals/results/load_stats.csv`.
+
+| requests | failures | throughput | p50 | p95 | p99 |
+|---|---|---|---|---|---|
+| 420 | 0 | 7.6 requests/s | 1.7 s | 4.1 s | 22 s |
+
+Throughput is limited by the CPU models, not by the regex checks. Each request runs the DeBERTa injection classifier, MiniLM embeddings, and Presidio. At 20 concurrent users their calls compete for the same cores, so requests queue. Single-request overhead is still about 60 ms; the seconds come from waiting in the queue. A run with 4 worker processes and 2 threads each did not help (2.6 requests/s), because each worker loads its own copy of the models. The next steps are batching classifier calls, or one model server shared by the workers.
+
 ## The eval gate in CI
 
 Every pull request runs two jobs in GitHub Actions. `test` runs the linter and 166 unit tests. `eval` runs the red-team set through the live code and compares the result with `evals/thresholds.yaml` and with the last result on `main`. If any check falls under its threshold, the job fails. If the overall catch rate drops more than 2 points, the job fails. The job posts the per-check table as a comment on the pull request. `main` is protected, so a failing job blocks the merge.
@@ -207,4 +219,4 @@ docs/              design spec, implementation plan, decision ledger
 
 ## Deployment
 
-The Docker image is 4.48 GB, based on `python:3.12-slim`, with the three Hugging Face models downloaded at build time. It starts in about 20 seconds, runs as user 1000, and listens on port 7860. Hugging Face Docker Spaces need a PRO subscription as of October 2026. The live URL is pending a hosting decision between Hugging Face PRO and Google Cloud Run. Secrets needed: `GEMINI_API_KEY`, and optionally `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`.
+**Live URL: not deployed.** The live URL is optional in the deliverables checklist, and this project runs locally for the demo. Hugging Face Docker Spaces need a paid PRO plan as of October 2026, and we did not take a paid plan. The app is ready to deploy. The Docker image is 4.48 GB, based on `python:3.12-slim`, with the three Hugging Face models downloaded at build time. It starts in about 20 seconds, runs as user 1000, and listens on port 7860. It runs on any Docker host, for example Google Cloud Run or a Hugging Face PRO Space. Secrets needed: `GEMINI_API_KEY`, and optionally `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`.
