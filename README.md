@@ -127,11 +127,17 @@ EVAL GATE FAILED:
 - jailbreak: catch_rate 0.875 < 0.9
 ```
 
+![Pull request #1 blocked by the eval gate](docs/img/blocked-pr.png)
+
 CI never calls a model. The judge responses were recorded once with `--record` into `evals/cassettes/llm.json` and are replayed in CI. Each run is free and gives the same answer every time.
 
 ## Observability
 
 Every `/chat` request creates one trace in Langfuse with three spans: `guard_input`, `llm`, and `guard_output`. Each span carries the verdicts, the policy version and hash, token counts, and cost. Traces only receive text after PII redaction. If the Langfuse keys are absent, tracing turns itself off.
+
+![A Langfuse trace for one chat request](docs/img/langfuse-trace.png)
+
+This trace is public: [open it in Langfuse](https://jp.cloud.langfuse.com/project/cmuycbncy000nad0e8j35wowx/traces/ae0e121f0c6e01e5b083957775c8bcf9).
 
 `GET /metrics` serves Prometheus counters and histograms: verdicts per check and mode, check errors, per-check latency, stage overhead, model spend, and request outcomes.
 
