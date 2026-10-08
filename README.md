@@ -220,3 +220,13 @@ docs/              design spec, implementation plan, decision ledger
 ## Deployment
 
 **Live URL: not deployed.** The live URL is optional in the deliverables checklist, and this project runs locally for the demo. Hugging Face Docker Spaces need a paid PRO plan as of October 2026, and we did not take a paid plan. The app is ready to deploy. The Docker image is 4.48 GB, based on `python:3.12-slim`, with the three Hugging Face models downloaded at build time. It starts in about 20 seconds, runs as user 1000, and listens on port 7860. It runs on any Docker host, for example Google Cloud Run or a Hugging Face PRO Space. Secrets needed: `GEMINI_API_KEY`, and optionally `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`.
+
+## Team
+
+- Archisman Midya ([@Om-Midya](https://github.com/Om-Midya))
+- Paramjeet Kaur ([@kauxp](https://github.com/kauxp))
+- Udit Nayak ([@UditNayak](https://github.com/UditNayak))
+- Ayaan Khan ([@ayaankhan28](https://github.com/ayaankhan28))
+- Aatmik Panse ([@aatmik-panse](https://github.com/aatmik-panse))
+- Syeda
+- [@its-wasp](https://github.com/its-wasp)
