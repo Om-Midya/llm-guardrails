@@ -2,7 +2,8 @@ version: "2.0"
 name: bankassist-strict
 input:
   jailbreak: {mode: enforce, params: {threshold: 1}}
-  prompt_injection: {mode: enforce, params: {threshold: 0.8, use_model: true}}
+  prompt_injection: {mode: enforce, params: {}}
+  prompt_injection_model: {mode: shadow, params: {threshold: 0.8}}
   pii_input: {mode: enforce, params: {action: redact}}
   topic: {mode: enforce, params: {min_similarity: 0.35}}
 output:

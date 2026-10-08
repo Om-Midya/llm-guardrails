@@ -66,3 +66,4 @@ Final: fixed uppercase fence (trivial, folded in) — test_uppercase_fence_is_un
 Final: minor (deferred): fork PRs — comment step now continue-on-error, no test
 Final: Ruling: X-Forwarded-For rightmost hop on the target platform unverified — stands until deployed, then check one request's bucket key — cost if wrong: all visitors share one 30/min bucket
 Final: suite 162/162 green, eval gate PASSED, main.json refreshed
+Final: split prompt_injection into regex (enforce) and prompt_injection_model (shadow) after a classifier false positive on 'Card ending ..., please block it'; added 6 classifier-only eval rows; shadow blocks no longer fail benign rows in the eval; policy hash now 2a67d237; suite 166/166, gate PASSED

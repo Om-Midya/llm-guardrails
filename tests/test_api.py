@@ -44,7 +44,7 @@ def test_chat_happy_path(client):
     assert body["blocked"] is False and "100000" in body["answer"]
     assert body["sources"] == ["upi.md"]
     assert {v["check"] for v in body["input_verdicts"]} == {
-        "jailbreak", "prompt_injection", "pii_input", "topic",
+        "jailbreak", "prompt_injection", "prompt_injection_model", "pii_input", "topic",
     }
     assert body["policy_version"] == "1.0" and body["llm_cost_usd"] > 0
 
@@ -209,3 +209,13 @@ def test_rate_limit_is_async_so_it_runs_on_the_event_loop():
     import inspect
 
     assert inspect.iscoroutinefunction(m.rate_limit)
+
+
+def test_classifier_false_positive_is_shadowed_not_blocked(client):
+    msg = "Card ending 4111 1111 1111 1111, expiry 08/28, please block it."
+    body = client.post("/chat", json={"message": msg}).json()
+    assert body["blocked"] is False
+    assert "prompt_injection_model" in body["shadow_blocks"]
+    assert "<CREDIT_CARD>" in next(
+        v["reason"] + " " for v in body["input_verdicts"] if v["check"] == "pii_input"
+    ) or any(v["action"] == "redact" for v in body["input_verdicts"])

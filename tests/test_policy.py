@@ -62,11 +62,15 @@ def test_wrong_stage_rejected(tmp_path, dummy_checks):
 def test_shipped_policies_load():
     for name in ("v1", "v2"):
         policy, _ = load_policy(f"policies/{name}.yaml")
-        assert set(policy.input) == {"prompt_injection", "jailbreak", "pii_input", "topic"}
+        assert set(policy.input) == {
+            "prompt_injection", "prompt_injection_model", "jailbreak", "pii_input", "topic",
+        }
         assert set(policy.output) == {
             "schema", "hallucination", "toxicity", "pii_output", "secret_leak",
         }
     v1, _ = load_policy("policies/v1.yaml")
     v2, _ = load_policy("policies/v2.yaml")
+    assert v1.input["prompt_injection_model"].mode == "shadow"
+    assert v1.input["prompt_injection"].mode == "enforce"
     assert v1.output["hallucination"].mode == "shadow"
     assert v2.output["hallucination"].mode == "enforce"

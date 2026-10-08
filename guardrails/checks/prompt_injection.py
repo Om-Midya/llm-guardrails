@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import re
 
 from guardrails.core import BaseCheck, Context, Verdict, normalize, register
-from guardrails.models import injection_classifier, windows
 
 PATTERNS = [
     r"^\s*(system|assistant)\s*:",
@@ -24,35 +22,14 @@ _COMPILED = [re.compile(p, re.IGNORECASE | re.MULTILINE) for p in PATTERNS]
 
 @register
 class PromptInjectionCheck(BaseCheck):
+    """Regex half of injection detection. The classifier lives in prompt_injection_model."""
+
     name = "prompt_injection"
     stage = "input"
 
     async def check(self, text: str, ctx: Context) -> Verdict:
-        threshold = float(self.params.get("threshold", 0.8))
-        use_model = bool(self.params.get("use_model", True))
         norm = normalize(text)
-
-        regex_hits = [p.pattern for p in _COMPILED if p.search(norm)]
-        score = 1.0 if regex_hits else 0.0
-        reason = f"regex hit: {regex_hits[0]}" if regex_hits else "no regex hit"
-
-        if not regex_hits and use_model:
-            # Overlapping windows so an attack placed late in a long input is still scored.
-            parts = windows(norm)
-            scores = await asyncio.gather(
-                *(asyncio.to_thread(self._model_score, w) for w in parts)
-            )
-            model_score = max(scores)
-            score = max(score, model_score)
-            reason = f"model injection prob {model_score:.2f} over {len(parts)} window(s)"
-
-        if score >= threshold:
-            return self.block(score, reason)
-        return self.allow(score, reason)
-
-    @staticmethod
-    def _model_score(text: str) -> float:
-        out = injection_classifier()(text)[0]
-        if out["label"].upper() == "INJECTION":
-            return float(out["score"])
-        return 1.0 - float(out["score"])
+        hits = [p.pattern for p in _COMPILED if p.search(norm)]
+        if hits:
+            return self.block(1.0, f"regex hit: {hits[0]}")
+        return self.allow(0.0, "no regex hit")

@@ -42,7 +42,7 @@ def test_benign_set():
 def test_thresholds_cover_all_checks():
     t = yaml.safe_load((E / "thresholds.yaml").read_text())
     names = {
-        "prompt_injection", "jailbreak", "pii_input", "topic", "schema",
+        "prompt_injection", "prompt_injection_model", "jailbreak", "pii_input", "topic", "schema",
         "hallucination", "toxicity", "pii_output", "secret_leak",
     }
     assert set(t["checks"]) == names and 0 < t["max_catch_rate_drop_vs_main"] < 0.1

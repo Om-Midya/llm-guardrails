@@ -77,7 +77,8 @@ async def run_all(policy_path: str) -> dict:
             lat[v.check].append(v.latency_ms)
             fp[v.check]["benign"] += 1
             fp[v.check]["false_positives"] += v.action == "block"
-        bad = [v.check for v in res.verdicts if v.action == "block"]
+        # A shadow block does not reach the user, so it is not a failed benign row.
+        bad = [v.check for v in res.verdicts if v.action == "block" and not v.shadow]
         items.append({
             "id": row["id"], "expected_check": None, "expected_action": "allow",
             "got_action": "block" if bad else "allow", "pass": not bad, "blocked_by": bad,
